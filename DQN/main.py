@@ -54,7 +54,7 @@ def main(args):
             state = next_state
 
             if done:
-                print('[Train] The {}th episode ends at {} time step. Its average loss is {:.4f}, running loss is {:.4f}'.format(
+                print('[Train] {}th episode ends at {} time step. Its average loss is {:.4f}, running loss is {:.4f}'.format(
                     episode, step, running_loss/step, running_loss))
                 episode_length.push_back(step)
                 break
@@ -77,7 +77,7 @@ def main(args):
 
                     if done:
                        break
-            print('[Eval] total reward: {}, average reward: {}'.format(total_reward, total_reward/NUM_TEST))
+            print('[Eval] {}th episode, total reward: {}, average reward: {}'.format(episode, total_reward, total_reward/NUM_TEST))
 
 
 if __name__ == '__main__':

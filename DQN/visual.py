@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from graphviz import Digraph
-from torch.autograd import Variable
+from utils import Variable
 
 class Visualizer(object):
     """Visualizer for statistics, e.g. loss"""

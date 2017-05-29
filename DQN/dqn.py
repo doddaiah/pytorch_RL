@@ -5,18 +5,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from utils import *
 from visual  import *
 
-use_cuda = torch.cuda.is_available()
-dtype = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
-
 SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
 
 # Replay Memory
-
 
 class ReplayMemory(object):
     """Replay Memory"""
@@ -82,6 +77,8 @@ class SimpleAgent(object):
         self.eps_count = 0
 
         self.dqn = SimpleDQN(self.num_state, self.num_action, 128)
+        if USE_CUDA:
+            self.dqn = self.dqn.cuda()
 
     @flatten_single_value
     def greedy_act(self, state):
@@ -91,7 +88,7 @@ class SimpleAgent(object):
         output = self.dqn(state)
         _, action = torch.max(output, 1)
         action = action.squeeze(0)
-        return action.data.numpy()
+        return action.data.cpu().numpy()
 
     @flatten_single_value
     def boltzmann_act(self, state):
@@ -101,7 +98,7 @@ class SimpleAgent(object):
         output = self.dqn(state)
         output = F.softmax(output)
         output = output.squeeze(0)
-        output = output.data.numpy()
+        output = output.data.cpu().numpy()
         assert self.action_space.n == output.shape[0], 'action shape: {}, output shape: {}'.format(
             self.action_space.n, output.shape)
         actions = np.arange(self.num_action)
@@ -141,7 +138,10 @@ class DQN_Optimizer(object):
         outputs = self.agent.dqn(
             Variable(torch.from_numpy(states)).type(dtype))
         mask = Variable(make_one_hot(actions, self.agent.num_action))
+        if USE_CUDA:
+            mask = mask.cuda()
         outputs = torch.masked_select(outputs, mask).view(-1,1)
+
 
         no_final_states = np.array([ns for ns in next_states if ns is not None])
         no_final_targets = self.agent.dqn(
@@ -149,6 +149,9 @@ class DQN_Optimizer(object):
         no_final_targets, _ = torch.max(no_final_targets, 1)
         targets = Variable(torch.zeros(self.memory.batch_size, 1))
         mask = Variable(torch.ByteTensor([ns is not None for ns in next_states]).view(-1,1))
+        if USE_CUDA:
+            mask = mask.cuda()
+            targets = targets.cuda()
         targets.masked_copy_(mask, no_final_targets)
         targets = self.gamma * targets + Variable((torch.from_numpy(rewards)
                                                    ).unsqueeze(1).type(dtype))
