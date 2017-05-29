@@ -19,7 +19,7 @@ SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
 
 
 class ReplayMemory(object):
-    """Repaly Memory"""
+    """Replay Memory"""
 
     def __init__(self, capacity, batch_size):
         super(ReplayMemory, self).__init__()
@@ -67,22 +67,23 @@ class SimpleDQN(nn.Module):
         return output
 
 
-class Agent(object):
-    """Agent"""
+class SimpleAgent(object):
+    """SimpleAgent"""
 
-    def __init__(self, num_state, actions, initial_eps, end_eps, eps_decay):
-        super(Agent, self).__init__()
-        self.num_state = num_state
-        self.num_action = len(actions)
-        self.actions = actions
+    def __init__(self, state_space, action_space, initial_eps, end_eps, eps_decay):
+        super(SimpleAgent, self).__init__()
+        self.num_state = state_space.shape[0]
+        self.num_action = action_space.n
+        self.action_space = action_space
 
         self.initial_eps = initial_eps
         self.end_eps = end_eps
         self.eps_decay = eps_decay
         self.eps_count = 0
 
-        self.dqn = SimpleDQN(self.num_state, self.num_action, 20)
+        self.dqn = SimpleDQN(self.num_state, self.num_action, 128)
 
+    @flatten_single_value
     def greedy_act(self, state):
         # input: state, numpy array, size = (num_state,)
         # output: action, numpy array, size = (1,)
@@ -101,14 +102,14 @@ class Agent(object):
         output = F.softmax(output)
         output = output.squeeze(0)
         output = output.data.numpy()
-        assert self.actions.shape == output.shape, 'action shape: {}, output shape: {}'.format(
-            self.actions.shape, output.shape)
-        return random.choices(self.actions, weights=output)
+        assert self.action_space.n == output.shape[0], 'action shape: {}, output shape: {}'.format(
+            self.action_space.n, output.shape)
+        actions = np.arange(self.num_action)
+        return random.choices(actions, weights=output)
 
-    @flatten_single_value
     def e_greedy_act(self, state):
         # input: state, numpy array, size = (num_state,)
-        # output: action, list, size = (1,)
+        # output: action, scalar value
         eps = self.end_eps + \
             (self.initial_eps - self.end_eps) * \
             np.exp(-self.eps_count/self.eps_decay)
@@ -116,14 +117,14 @@ class Agent(object):
         if np.random.random() > eps:
             return self.greedy_act(state)
         else:
-            return random.choices(self.actions)
+            return self.action_space.sample()
 
 
-class DQN_optimizer(object):
+class DQN_Optimizer(object):
     """An optimizer of training DQN"""
 
     def __init__(self, agent, gamma, capacity, batch_size, initial_lr):
-        super(DQN_optimizer, self).__init__()
+        super(DQN_Optimizer, self).__init__()
         self.agent = agent
         self.gamma = gamma
         self.memory = ReplayMemory(capacity, batch_size)
@@ -149,7 +150,6 @@ class DQN_optimizer(object):
         targets = Variable(torch.zeros(self.memory.batch_size, 1))
         mask = Variable(torch.ByteTensor([ns is not None for ns in next_states]).view(-1,1))
         targets.masked_copy_(mask, no_final_targets)
-
         targets = self.gamma * targets + Variable((torch.from_numpy(rewards)
                                                    ).unsqueeze(1).type(dtype))
         targets = targets.detach()

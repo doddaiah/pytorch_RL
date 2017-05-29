@@ -4,7 +4,7 @@ from itertools import count
 
 from utils import *
 from visual import Visualizer
-from dqn import SARS, Agent, DQN_optimizer
+from dqn import SARS, SimpleAgent, DQN_Optimizer
 
 # MACRO
 ENV = 'CartPole-v0'
@@ -24,12 +24,9 @@ def main(args):
     print('Playing {}'.format(args.env))
     env = gym.make(args.env).unwrapped
 
-    num_state = env.observation_space.shape[0]
-    actions = action_space_wrapper(env.action_space)
-
-    agent = Agent(num_state, actions, args.init_eps,
+    agent = SimpleAgent(env.observation_space, env.action_space, args.init_eps,
                   args.end_eps, args.eps_decay)
-    agent_optimizer = DQN_optimizer(
+    agent_optimizer = DQN_Optimizer(
         agent, args.gamma, args.capacity, args.batch_size, args.init_lr)
 
     episode_length = Visualizer()
@@ -49,7 +46,6 @@ def main(args):
                 next_state = None
             agent_optimizer.memory.push_back(
                     SARS(state, action, reward, next_state))
-
 
             if agent_optimizer.memory.trainable:
                 loss = agent_optimizer.step()
@@ -72,7 +68,6 @@ def main(args):
                 for step in count():
                     # evaluating agent greedily
                     action = agent.greedy_act(state)
-                    action = action[0]
 
                     next_state, reward, done, _ = env.step(action)
                     env.render()

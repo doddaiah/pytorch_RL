@@ -1,11 +1,6 @@
 import numpy as np
 import torch
 
-
-def action_space_wrapper(gym_action_space):
-    return np.array([x for x in range(gym_action_space.n)], dtype=np.int)
-
-
 def flatten_single_value(func):
 	# flatter a single value list/np.array to single value
     def wrapper(*args, **kwargs):
