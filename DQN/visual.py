@@ -1,5 +1,9 @@
 import matplotlib
-matplotlib.use('TkAgg')
+is_ipython = 'inline' in matplotlib.get_backend()
+if is_ipython:
+    from IPython import display
+else:
+    matplotlib.use('TkAgg')
 matplotlib.rcParams['toolbar'] = 'None'
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,6 +37,9 @@ class Visualizer(object):
             plt.xlabel(self.bundle[name]['xlabel'])
             plt.ylabel(self.bundle[name]['ylabel'])
         self.fig.canvas.draw()
+        if is_ipython:
+            display.clear_output(wait=True)
+            display.display(plt.gcf())
 
     def push_back(self, **kwargs):
         for name, data in kwargs.items():
