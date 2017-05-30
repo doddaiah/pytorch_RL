@@ -29,7 +29,10 @@ def main(args):
     agent_optimizer = DQN_Optimizer(
         agent, args.gamma, args.capacity, args.batch_size, args.init_lr)
 
-    episode_length = Visualizer()
+    visualizer = Visualizer()
+    visualizer.register('episode_length', 'episode', 'episode_length')
+    visualizer.register('average_loss', 'episode', 'average_loss')
+    visualizer.register('evaluation_length', 'episode *100', 'evaluation_length')
 
     for episode in range(args.num_episode):
         state = env.reset()
@@ -54,9 +57,9 @@ def main(args):
             state = next_state
 
             if done:
-                print('[Train] {}th episode ends at {} time step. Its average loss is {:.4f}, running loss is {:.4f}'.format(
-                    episode, step, running_loss/step, running_loss))
-                episode_length.push_back(step)
+                # print('[Train] {}th episode ends at {} time step. Its average loss is {:.4f}, running loss is {:.4f}'.format(
+                    # episode, step, running_loss/step, running_loss))
+                visualizer.push_back(episode_length=step, average_loss=running_loss/step)
                 break
 
         if episode % 100 == 99:
@@ -76,8 +79,10 @@ def main(args):
                     total_reward += reward
 
                     if done:
-                       break
+                        break
             print('[Eval] {}th episode, total reward: {}, average reward: {}'.format(episode, total_reward, total_reward/NUM_TEST))
+            visualizer.push_back(evaluation_length=total_reward/NUM_TEST)
+    visualizer.save()
 
 
 if __name__ == '__main__':

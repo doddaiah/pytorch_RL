@@ -7,23 +7,41 @@ import numpy as np
 from graphviz import Digraph
 from utils import Variable
 
+
 class Visualizer(object):
     """Visualizer for statistics, e.g. loss"""
 
     def __init__(self):
         super(Visualizer, self).__init__()
-        self.fig = plt.figure(figsize=(6, 6))
-        self.data = np.zeros(shape=(0,))
+        plt.ion()
+        self.bundle = {}
+        self.fig = plt.figure(figsize=(6,12))
+
+    def __del__(self):
+        plt.ioff()
+
+    def register(self, title, xlabel, ylabel):
+        self.bundle[title] = {'data': np.zeros(shape=(0,)), 'title': title, 'xlabel': xlabel, 'ylabel': ylabel}
 
     def draw(self):
         self.fig.clf()
-        plt.title("Training...")
-        plt.plot(self.data)
-        plt.draw()
+        num_ax = len(self.bundle)
+        for ax, name in enumerate(self.bundle):
+            plt.subplot(num_ax, 1, ax+1)
+            plt.plot(self.bundle[name]['data'])
+            plt.title(self.bundle[name]['title'])
+            plt.xlabel(self.bundle[name]['xlabel'])
+            plt.ylabel(self.bundle[name]['ylabel'])
+        self.fig.canvas.draw()
 
-    def push_back(self, x):
-        self.data = np.append(self.data, x)
+    def push_back(self, **kwargs):
+        for name, data in kwargs.items():
+            self.bundle[name]['data'] = np.append(self.bundle[name]['data'], data)
         self.draw()
+
+    def save(self):
+        self.fig.savefig('Visualizer.png')
+
 
 def pytorch_net_visualizer(var):
     '''
@@ -43,7 +61,7 @@ def pytorch_net_visualizer(var):
     def add_nodes(var):
         if var not in seen:
             if isinstance(var, Variable):
-                value = '('+(', ').join(['%d'% v for v in var.size()])+')'
+                value = '('+(', ').join(['%d' % v for v in var.size()])+')'
                 dot.node(str(id(var)), str(value), fillcolor='lightblue')
             else:
                 dot.node(str(id(var)), str(type(var).__name__))
