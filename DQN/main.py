@@ -9,14 +9,14 @@ from dqn import SARS, SimpleAgent, DQN_Optimizer
 # MACRO
 ENV = 'CartPole-v0'
 CAPACITY = int(1e5)
-NUM_EPISODE = int(1e3)
+NUM_EPISODE = int(3e3)
 NUM_TEST = 10
 BATCH_SIZE = 32
 
 GAMMA = 0.9
-INIT_EPS = 0.5
+INIT_EPS = 0.9
 END_EPS = 0.01
-EPS_DECAY = 200
+EPS_DECAY = 2000
 INIT_LR = 0.001
 
 
@@ -33,6 +33,7 @@ def main(args):
     visualizer.register('episode_length', 'episode', 'episode_length')
     visualizer.register('average_loss', 'episode', 'average_loss')
     visualizer.register('evaluation_length', 'episode *100', 'evaluation_length')
+    visualizer.register('epsilon', 'episode', 'epsilon')
 
     for episode in range(args.num_episode):
         state = env.reset()
@@ -59,7 +60,7 @@ def main(args):
             if done:
                 # print('[Train] {}th episode ends at {} time step. Its average loss is {:.4f}, running loss is {:.4f}'.format(
                     # episode, step, running_loss/step, running_loss))
-                visualizer.push_back(episode_length=step, average_loss=running_loss/step)
+                visualizer.push_back(episode_length=step, average_loss=running_loss/step, epsilon=agent.eps)
                 break
 
         if episode % 100 == 99:

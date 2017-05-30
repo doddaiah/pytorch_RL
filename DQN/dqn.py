@@ -1,3 +1,4 @@
+import copy
 import random
 from collections import deque, namedtuple
 
@@ -77,8 +78,10 @@ class SimpleAgent(object):
         self.eps_count = 0
 
         self.dqn = SimpleDQN(self.num_state, self.num_action, 128)
+        self.target_dqn = copy.deepcopy(self.dqn)
         if USE_CUDA:
             self.dqn = self.dqn.cuda()
+            self.target_dqn = self.target_dqn.cuda()
 
     @flatten_single_value
     def greedy_act(self, state):
@@ -107,11 +110,11 @@ class SimpleAgent(object):
     def e_greedy_act(self, state):
         # input: state, numpy array, size = (num_state,)
         # output: action, scalar value
-        eps = self.end_eps + \
+        self.eps = self.end_eps + \
             (self.initial_eps - self.end_eps) * \
             np.exp(-self.eps_count/self.eps_decay)
         self.eps_count += 1
-        if np.random.random() > eps:
+        if np.random.random() > self.eps:
             return self.greedy_act(state)
         else:
             return self.action_space.sample()
@@ -142,9 +145,8 @@ class DQN_Optimizer(object):
             mask = mask.cuda()
         outputs = torch.masked_select(outputs, mask).view(-1,1)
 
-
         no_final_states = np.array([ns for ns in next_states if ns is not None])
-        no_final_targets = self.agent.dqn(
+        no_final_targets = self.agent.target_dqn(
             Variable(torch.from_numpy(no_final_states).type(dtype), volatile=True))
         no_final_targets, _ = torch.max(no_final_targets, 1)
         targets = Variable(torch.zeros(self.memory.batch_size, 1))
@@ -166,5 +168,10 @@ class DQN_Optimizer(object):
         loss.backward()
         
         self.optimizer.step()
+
+        if self.agent.eps_count % 1 == 0:
+            self.agent.target_dqn = copy.deepcopy(self.agent.dqn)
+            if USE_CUDA:
+                self.agent.target_dqn = self.agent.target_dqn.cuda()
 
         return loss.data[0]
