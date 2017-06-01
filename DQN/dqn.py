@@ -169,7 +169,7 @@ class DQN_Optimizer(object):
         
         self.optimizer.step()
 
-        if self.agent.eps_count % 1 == 0:
+        if self.agent.eps_count % 128 == 0:
             self.agent.target_dqn = copy.deepcopy(self.agent.dqn)
             if USE_CUDA:
                 self.agent.target_dqn = self.agent.target_dqn.cuda()

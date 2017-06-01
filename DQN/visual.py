@@ -36,6 +36,7 @@ class Visualizer(object):
             plt.title(self.bundle[name]['title'])
             plt.xlabel(self.bundle[name]['xlabel'])
             plt.ylabel(self.bundle[name]['ylabel'])
+        plt.tight_layout()
         self.fig.canvas.draw()
         if is_ipython:
             display.clear_output(wait=True)
