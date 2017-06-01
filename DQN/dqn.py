@@ -166,6 +166,10 @@ class DQN_Optimizer(object):
         # input("Visualizing DQN...")
 
         loss.backward()
+
+        # gradient clamping in case of gradient explosion
+        for param in self.agent.dqn.parameters():
+            param.grad.data.clamp_(-1, 1)
         
         self.optimizer.step()
 
