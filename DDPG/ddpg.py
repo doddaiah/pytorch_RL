@@ -9,6 +9,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from pycrayon import CrayonClient
+
 from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values
 from visual import pytorch_net_visualizer
 
@@ -134,6 +136,11 @@ class DDPGOptimizer(object):
         self.actor_optimizer = optim.Adam(
             self.agent.actor.parameters(), lr=init_lr['actor'])
 
+        self.cc = CrayonClient()
+        if (self.cc.get_experiment_names() is not None):
+            self.cc.remove_all_experiments()
+        self.stats = self.cc.create_experiment('stats')
+
     def step(self):
         samples = self.memory.sample()
         states, actions, rewards, next_states = map(
@@ -158,6 +165,8 @@ class DDPGOptimizer(object):
         targets = targets.detach()
 
         loss = self.critic_criterion(outputs, targets)
+
+        self.stats.add_scalar_value('critic loss', loss.data[0])
 
         loss.backward()
 
