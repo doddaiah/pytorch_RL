@@ -1,4 +1,5 @@
 import gym
+from gym import wrappers
 import argparse
 import numpy as np
 from itertools import count
@@ -11,7 +12,7 @@ NUM_EPISODE = int(1e4)
 NUM_TEST = 5
 BATCH_SIZE = 32
 GAMMA = 0.99
-TAU = 1e-2
+TAU = 1e-3
 WEIGHT_DECAY = 1e-2
 ACTOR_INIT_LR = 1e-4
 CRITIC_INIT_LR = 1e-3
@@ -20,6 +21,8 @@ NUMPY_PRECISION = np.float32
 
 def main(args):
     env = gym.make(args.env)
+    outdir = '/tmp/ddpg'
+    env = wrappers.Monitor(env, outdir, force=True)
 
     agent = DDPGAgent(env.observation_space.shape[0],
                       env.action_space.shape[0])
@@ -31,6 +34,7 @@ def main(args):
         state = env.reset().astype(NUMPY_PRECISION)
 
         running_loss = 0.
+        training_total_reward = 0.
         for step in count():
             action = agent.noisy_act(state)
 
@@ -50,10 +54,13 @@ def main(args):
                 running_loss += loss
 
             state = next_state
+            training_total_reward += reward
 
             if done:
                 optimizer.stats.add_scalar_value('average loss', running_loss/step)
                 optimizer.stats.add_scalar_value('step', step)
+                optimizer.stats.add_scalar_value('training total reward',
+                        training_total_reward)
                 break
 
         if episode % 100 == 99:
@@ -81,6 +88,8 @@ def main(args):
                         break
             print('[Eval] {}th episode, total reward: {}, average reward: {}'.format(
                 episode, total_reward, total_reward/args.num_test))
+            
+    env.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
