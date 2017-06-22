@@ -7,14 +7,14 @@ from ddpg import SARS, DDPGAgent, DDPGOptimizer
 
 ENV = 'BipedalWalker-v2'
 CAPACITY = int(1e6)
-NUM_EPISODE = int(3e3)
-NUM_TEST = 10
+NUM_EPISODE = int(1e4)
+NUM_TEST = 5
 BATCH_SIZE = 32
 GAMMA = 0.99
-TAU = 1e-3
+TAU = 1e-2
 WEIGHT_DECAY = 1e-2
-ACTOR_INIT_LR = 1e-5
-CRITIC_INIT_LR = 1e-4
+ACTOR_INIT_LR = 1e-4
+CRITIC_INIT_LR = 1e-3
 NUMPY_PRECISION = np.float32
 
 
@@ -30,10 +30,12 @@ def main(args):
         agent.ou_noise.reset()
         state = env.reset().astype(NUMPY_PRECISION)
 
+        running_loss = 0.
         for step in count():
             action = agent.noisy_act(state)
 
             next_state, reward, done, _ = env.step(action)
+            # env.render()
 
             state, action, reward, next_state = map(
                 lambda x: NUMPY_PRECISION(x), (state, action, reward, next_state))
@@ -44,14 +46,17 @@ def main(args):
                 SARS(state, action, reward, next_state))
 
             if optimizer.memory.trainable:
-                optimizer.step()
+                loss = optimizer.step()
+                running_loss += loss
 
             state = next_state
 
             if done:
+                optimizer.stats.add_scalar_value('average loss', running_loss/step)
+                optimizer.stats.add_scalar_value('step', step)
                 break
 
-        if episode % 100 == 0:
+        if episode % 100 == 99:
             total_reward = 0.
 
             for eval in range(args.num_test):

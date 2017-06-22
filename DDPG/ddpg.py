@@ -10,8 +10,7 @@ import torch.nn.functional as F
 
 from pycrayon import CrayonClient
 
-# from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA #, dtype
-from utils import *
+from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA #, dtype
 from visual import pytorch_net_visualizer
 
 SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
@@ -208,3 +207,5 @@ class DDPGOptimizer(object):
 
         for param, param_target in zip(self.agent.actor.parameters(), self.agent.actor_target.parameters()):
             param_target = self.tau * param + (1 - self.tau) * param_target
+
+        return loss.data[0]
