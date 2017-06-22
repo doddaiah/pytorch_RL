@@ -24,8 +24,12 @@ def main(args):
     outdir = '/tmp/ddpg'
     env = wrappers.Monitor(env, outdir, force=True)
 
+    assert (env.action_space.high == -env.action_space.low).all(), 'action_space bound should be symmetric'
+    assert (env.action_space.high == env.action_space.high[0]).all(), 'all action dims should have the same bound'
+
     agent = DDPGAgent(env.observation_space.shape[0],
-                      env.action_space.shape[0])
+                      env.action_space.shape[0],
+                      float(env.action_space.high[0]))
     optimizer = DDPGOptimizer(agent, args.capacity, args.batch_size,
                               args.gamma, args.tau, args.init_lr, args.weight_decay)
 

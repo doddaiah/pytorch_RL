@@ -46,7 +46,7 @@ class ReplayMemory(object):
 class Actor(nn.Module):
     """docstring for actor"""
 
-    def __init__(self, num_states, num_actions, num_hidden_units, num_hidden_layers=1, activation=nn.ReLU()):
+    def __init__(self, num_states, num_actions, actions_bound, num_hidden_units, num_hidden_layers=1, activation=nn.ReLU()):
         super(Actor, self).__init__()
         self.input_layer = nn.Linear(num_states, num_hidden_units)
         self.fc = nn.Linear(num_hidden_units, num_hidden_units)
@@ -54,12 +54,14 @@ class Actor(nn.Module):
         self.output_layer = nn.Linear(num_hidden_units, num_actions)
         self.num_hidden_layers = num_hidden_layers
         self.activation = activation
+        self.actions_bound = actions_bound
 
     def forward(self, state):
         output = self.activation(self.bn(self.input_layer(state)))
         for _ in range(self.num_hidden_layers):
             output = self.activation(self.bn(self.fc(output)))
         output = F.tanh(self.output_layer(output))
+        output = torch.mul(output, self.actions_bound)
         return output
 
 
@@ -91,12 +93,12 @@ class Critic(nn.Module):
 class DDPGAgent(object):
     """docstring for DDPGAgent"""
 
-    def __init__(self, num_states, num_actions):
+    def __init__(self, num_states, num_actions, actions_bound):
         super(DDPGAgent, self).__init__()
         self.num_states = num_states
         self.num_actions = num_actions
 
-        self.actor = Actor(num_states, num_actions, 128)
+        self.actor = Actor(num_states, num_actions, actions_bound, 128)
         self.actor_target = copy.deepcopy(self.actor)
         self.critic = Critic(num_states, num_actions, 128, 2)
         self.critic_target = copy.deepcopy(self.critic)
