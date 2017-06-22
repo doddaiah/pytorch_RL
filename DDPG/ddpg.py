@@ -7,15 +7,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from pycrayon import CrayonClient
 
-from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values
+# from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA #, dtype
+from utils import *
 from visual import pytorch_net_visualizer
-
-USE_CUDA = torch.cuda.is_available()
-# dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 
 SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
 
@@ -107,6 +104,12 @@ class DDPGAgent(object):
 
         self.ou_noise = Ornstein_Uhlenbeck_Process(num_actions)
 
+        if USE_CUDA:
+            self.actor = self.actor.cuda()
+            self.actor_target = self.actor_target.cuda()
+            self.critic = self.critic.cuda()
+            self.critic_target = self.critic_target.cuda()
+
     @Clip_Action_Values
     def noisy_act(self, state):
         action = self.act(state)
@@ -137,9 +140,11 @@ class DDPGOptimizer(object):
             self.agent.actor.parameters(), lr=init_lr['actor'])
 
         self.cc = CrayonClient()
-        if (self.cc.get_experiment_names() is not None):
-            self.cc.remove_all_experiments()
-        self.stats = self.cc.create_experiment('stats')
+        try:
+            self.stats = self.cc.create_experiment('stats')
+        except ValueError:
+            self.cc.remove_experiment('stats')
+            self.stats = self.cc.create_experiment('stats')
 
     def step(self):
         samples = self.memory.sample()
