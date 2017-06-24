@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from pycrayon import CrayonClient
 
-from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA #, dtype
+from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA  # , dtype
 from visual import pytorch_net_visualizer
 
 SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
@@ -197,7 +197,8 @@ class DDPGOptimizer(object):
 
         outputs = self.agent.critic(Variable(torch.from_numpy(states), requires_grad=False),
                                     self.agent.actor(Variable(torch.from_numpy(states), requires_grad=True)))
-        outputs = -torch.mean(outputs) # negation since we want the police increase the likelihood of good reward trajectory
+        # negation since we want the police increase the likelihood of good reward trajectory
+        outputs = -torch.mean(outputs)
         outputs.backward()
 
         # actor_visualizer = pytorch_net_visualizer(outputs)

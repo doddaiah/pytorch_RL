@@ -25,8 +25,10 @@ def main(args):
     outdir = '/tmp/ddpg'
     env = wrappers.Monitor(env, outdir, force=True)
 
-    assert (env.action_space.high == -env.action_space.low).all(), 'action_space bound should be symmetric'
-    assert (env.action_space.high == env.action_space.high[0]).all(), 'all action dims should have the same bound'
+    assert (env.action_space.high == -
+            env.action_space.low).all(), 'action_space bound should be symmetric'
+    assert (env.action_space.high == env.action_space.high[
+            0]).all(), 'all action dims should have the same bound'
 
     agent = DDPGAgent(env.observation_space.shape[0],
                       env.action_space.shape[0],
@@ -63,10 +65,11 @@ def main(args):
 
             if done:
                 if args.crayon_vis:
-                    optimizer.stats.add_scalar_value('average loss', running_loss/step)
+                    optimizer.stats.add_scalar_value(
+                        'average loss', running_loss/step)
                     optimizer.stats.add_scalar_value('step', step)
                     optimizer.stats.add_scalar_value('training total reward',
-                            training_total_reward)
+                                                     training_total_reward)
                 break
 
         if episode % 100 == 99:
@@ -94,7 +97,7 @@ def main(args):
                         break
             print('[Eval] {}th episode, total reward: {}, average reward: {}'.format(
                 episode, total_reward, total_reward/args.num_test))
-            
+
     env.close()
 
 if __name__ == '__main__':
@@ -117,6 +120,7 @@ if __name__ == '__main__':
                         help='tau in updating target', type=float)
     parser.add_argument('--weight_decay', default=WEIGHT_DECAY,
                         help='weight decay in optimizing', type=float)
-    parser.add_argument('--crayon_vis', default=CRAYON_VISUALIZTION, type=bool, help='whether to show crayon stats')
+    parser.add_argument('--crayon_vis', default=CRAYON_VISUALIZTION,
+                        type=bool, help='whether to show crayon stats')
     args = parser.parse_args()
     main(args)
