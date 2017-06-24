@@ -17,6 +17,7 @@ WEIGHT_DECAY = 1e-2
 ACTOR_INIT_LR = 1e-4
 CRITIC_INIT_LR = 1e-3
 NUMPY_PRECISION = np.float32
+CRAYON_VISUALIZTION = False
 
 
 def main(args):
@@ -31,7 +32,7 @@ def main(args):
                       env.action_space.shape[0],
                       float(env.action_space.high[0]))
     optimizer = DDPGOptimizer(agent, args.capacity, args.batch_size,
-                              args.gamma, args.tau, args.init_lr, args.weight_decay)
+                              args.gamma, args.tau, args.init_lr, args.weight_decay, args.crayon_vis)
 
     for episode in range(args.num_episode):
         agent.ou_noise.reset()
@@ -61,10 +62,11 @@ def main(args):
             training_total_reward += reward
 
             if done:
-                optimizer.stats.add_scalar_value('average loss', running_loss/step)
-                optimizer.stats.add_scalar_value('step', step)
-                optimizer.stats.add_scalar_value('training total reward',
-                        training_total_reward)
+                if args.crayon_vis:
+                    optimizer.stats.add_scalar_value('average loss', running_loss/step)
+                    optimizer.stats.add_scalar_value('step', step)
+                    optimizer.stats.add_scalar_value('training total reward',
+                            training_total_reward)
                 break
 
         if episode % 100 == 99:
@@ -115,5 +117,6 @@ if __name__ == '__main__':
                         help='tau in updating target', type=float)
     parser.add_argument('--weight_decay', default=WEIGHT_DECAY,
                         help='weight decay in optimizing', type=float)
+    parser.add_argument('--crayon_vis', default=CRAYON_VISUALIZTION, type=bool, help='whether to show crayon stats')
     args = parser.parse_args()
     main(args)

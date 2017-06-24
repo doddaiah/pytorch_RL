@@ -128,7 +128,7 @@ class DDPGAgent(object):
 class DDPGOptimizer(object):
     """docstring for DDPGOptimizer"""
 
-    def __init__(self, agent, capacity, batch_size, gamma, tau, init_lr, weight_decay):
+    def __init__(self, agent, capacity, batch_size, gamma, tau, init_lr, weight_decay, crayon_vis):
         super(DDPGOptimizer, self).__init__()
         self.agent = agent
         self.gamma = gamma
@@ -140,12 +140,14 @@ class DDPGOptimizer(object):
         self.actor_optimizer = optim.Adam(
             self.agent.actor.parameters(), lr=init_lr['actor'])
 
-        self.cc = CrayonClient()
-        try:
-            self.stats = self.cc.create_experiment('stats')
-        except ValueError:
-            self.cc.remove_experiment('stats')
-            self.stats = self.cc.create_experiment('stats')
+        self.crayon_vis = crayon_vis
+        if self.crayon_vis:
+            self.cc = CrayonClient()
+            try:
+                self.stats = self.cc.create_experiment('stats')
+            except ValueError:
+                self.cc.remove_experiment('stats')
+                self.stats = self.cc.create_experiment('stats')
 
     def step(self):
         samples = self.memory.sample()
@@ -172,7 +174,8 @@ class DDPGOptimizer(object):
 
         loss = self.critic_criterion(outputs, targets)
 
-        self.stats.add_scalar_value('critic loss', loss.data[0])
+        if self.crayon_vis:
+            self.stats.add_scalar_value('critic loss', loss.data[0])
 
         loss.backward()
 
