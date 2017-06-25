@@ -1,9 +1,9 @@
 import numpy as np
 import torch
 
-OU_THETA = 0.15
+OU_THETA = 0.25
 OU_MU = 0
-OU_SIGMA = 0.2
+OU_SIGMA = 0.4
 
 USE_CUDA = torch.cuda.is_available()
 # dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
@@ -28,15 +28,6 @@ class Ornstein_Uhlenbeck_Process(object):
 
     def reset(self):
         self.x = np.zeros(shape=(self.num_dim))
-
-
-def Clip_Action_Values(func):
-    # Clip action values so that they are within reasonbale range
-    def wrapper(*args, **kwargs):
-        value = np.clip(func(*args, **kwargs), -1, 1)
-        return value
-    return wrapper
-
 
 class Variable(torch.autograd.Variable):
     """docstring for Variable"""

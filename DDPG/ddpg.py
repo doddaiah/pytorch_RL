@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from pycrayon import CrayonClient
 
-from utils import Ornstein_Uhlenbeck_Process, Clip_Action_Values, Variable, USE_CUDA  # , dtype
+from utils import Ornstein_Uhlenbeck_Process, Variable, USE_CUDA  # , dtype
 from visual import pytorch_net_visualizer
 
 SARS = namedtuple('SARS', ['state', 'action', 'reward', 'next_state'])
@@ -97,6 +97,7 @@ class DDPGAgent(object):
         super(DDPGAgent, self).__init__()
         self.num_states = num_states
         self.num_actions = num_actions
+        self.actions_bound = actions_bound
 
         self.actor = Actor(num_states, num_actions, actions_bound, 128)
         self.actor_target = copy.deepcopy(self.actor)
@@ -111,10 +112,10 @@ class DDPGAgent(object):
             self.critic = self.critic.cuda()
             self.critic_target = self.critic_target.cuda()
 
-    @Clip_Action_Values
     def noisy_act(self, state):
         action = self.act(state)
         action = action + self.ou_noise.next()
+        action = np.clip(action, -self.actions_bound, self.actions_bound)
         return action
 
     def act(self, state):

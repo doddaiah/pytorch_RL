@@ -11,13 +11,13 @@ CAPACITY = int(1e6)
 NUM_EPISODE = int(1e4)
 NUM_TEST = 5
 BATCH_SIZE = 32
-GAMMA = 0.99
+GAMMA = 0.9
 TAU = 1e-3
 WEIGHT_DECAY = 1e-2
 ACTOR_INIT_LR = 1e-4
 CRITIC_INIT_LR = 1e-3
 NUMPY_PRECISION = np.float32
-CRAYON_VISUALIZTION = False
+CRAYON_VISUALIZTION = True
 
 
 def main(args):
@@ -46,7 +46,7 @@ def main(args):
             action = agent.noisy_act(state)
 
             next_state, reward, done, _ = env.step(action)
-            # env.render()
+            env.render()
 
             state, action, reward, next_state = map(
                 lambda x: NUMPY_PRECISION(x), (state, action, reward, next_state))
@@ -64,7 +64,7 @@ def main(args):
             training_total_reward += reward
 
             if done:
-                if args.crayon_vis:
+                if optimizer.crayon_vis:
                     optimizer.stats.add_scalar_value(
                         'average loss', running_loss/step)
                     optimizer.stats.add_scalar_value('step', step)
