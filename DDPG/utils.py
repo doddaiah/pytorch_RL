@@ -1,9 +1,10 @@
 import numpy as np
 import torch
 
-OU_THETA = 0.25
+OU_THETA = 0.15
 OU_MU = 0
-OU_SIGMA = 0.4
+OU_SIGMA = 0.2
+OU_DT = 1e-2
 
 USE_CUDA = torch.cuda.is_available()
 # dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
@@ -12,16 +13,17 @@ USE_CUDA = torch.cuda.is_available()
 class Ornstein_Uhlenbeck_Process(object):
     """docstring for Ornstein_Uhlenbeck_Process"""
 
-    def __init__(self, num_dim, theta=OU_THETA, mu=OU_MU, sigma=OU_SIGMA):
+    def __init__(self, num_dim, theta=OU_THETA, mu=OU_MU, sigma=OU_SIGMA, dt=OU_DT):
         super(Ornstein_Uhlenbeck_Process, self).__init__()
         self.num_dim = num_dim
         self.theta = theta
         self.mu = mu
         self.sigma = sigma
+        self.dt = dt
         self.x = np.zeros(shape=(self.num_dim))
 
     def next(self):
-        dx = self.theta*(self.mu-self.x) + self.sigma * \
+        dx = self.theta*(self.mu-self.x) * self.dt + self.sigma * np.sqrt(self.dt) * \
             np.random.normal(size=self.num_dim)
         self.x = self.x + dx
         return self.x
