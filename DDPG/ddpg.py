@@ -46,46 +46,43 @@ class ReplayMemory(object):
 class Actor(nn.Module):
     """docstring for actor"""
 
-    def __init__(self, num_states, num_actions, actions_bound, num_hidden_units, num_hidden_layers=1, activation=nn.ReLU()):
+    def __init__(self, num_states, num_actions, num_hidden_units):
         super(Actor, self).__init__()
         self.input_layer = nn.Linear(num_states, num_hidden_units)
-        self.fc = nn.Linear(num_hidden_units, num_hidden_units)
-        self.bn = nn.BatchNorm1d(num_hidden_units)
+        self.input_bn = nn.BatchNorm1d(num_hidden_units)
+        self.fc1 = nn.Linear(num_hidden_units, num_hidden_units)
+        self.fc1_bn = nn.BatchNorm1d(num_hidden_units)
         self.output_layer = nn.Linear(num_hidden_units, num_actions)
-        self.num_hidden_layers = num_hidden_layers
-        self.activation = activation
-        self.actions_bound = actions_bound
 
     def forward(self, state):
-        output = self.activation(self.bn(self.input_layer(state)))
-        for _ in range(self.num_hidden_layers):
-            output = self.activation(self.bn(self.fc(output)))
+        output = F.relu(self.input_bn(self.input_layer(state)))
+        output = F.relu(self.fc1_bn(self.fc1(output)))
         output = F.tanh(self.output_layer(output))
-        output = torch.mul(output, self.actions_bound)
         return output
 
 
 class Critic(nn.Module):
     """docstring for Critic"""
 
-    def __init__(self, num_states, num_actions, num_hidden_units, num_hidden_layers=1, activation=nn.ReLU()):
+    def __init__(self, num_states, num_actions, num_hidden_units):
         super(Critic, self).__init__()
         self.state_input_layer = nn.Linear(num_states, num_hidden_units)
+        self.state_input_bn = nn.BatchNorm1d(num_hidden_units)
         self.cat_fc = nn.Linear(num_hidden_units+num_actions, num_hidden_units)
-        self.fc = nn.Linear(num_hidden_units, num_hidden_units)
-        self.bn = nn.BatchNorm1d(num_hidden_units)
+        self.cat_fc_bn = nn.BatchNorm1d(num_hidden_units)
+        self.fc1 = nn.Linear(num_hidden_units, num_hidden_units)
+        self.fc1_bn = nn.BatchNorm1d(num_hidden_units)
+        self.fc2 = nn.Linear(num_hidden_units, num_hidden_units)
+        self.fc2_bn = nn.BatchNorm1d(num_hidden_units)
         self.output_layer = nn.Linear(num_hidden_units, 1)
-        self.num_hidden_layers = num_hidden_layers
-        self.activation = activation
 
     def forward(self, state, action):
         # input: state + action (both are continuous)
-        state_input = self.activation(self.bn(self.state_input_layer(state)))
-
+        state_input = F.relu(self.state_input_bn(self.state_input_layer(state)))
         output = torch.cat((state_input, action), 1)
-        output = self.activation(self.bn(self.cat_fc(output)))
-        for _ in range(self.num_hidden_layers):
-            output = self.activation(self.bn(self.fc(output)))
+        output = F.relu(self.cat_fc_bn(self.cat_fc(output)))
+        output = F.relu(self.fc1_bn(self.fc1(output)))
+        output = F.relu(self.fc2_bn(self.fc2(output)))
         output = self.output_layer(output)
         return output
 
@@ -93,15 +90,14 @@ class Critic(nn.Module):
 class DDPGAgent(object):
     """docstring for DDPGAgent"""
 
-    def __init__(self, num_states, num_actions, actions_bound):
+    def __init__(self, num_states, num_actions):
         super(DDPGAgent, self).__init__()
         self.num_states = num_states
         self.num_actions = num_actions
-        self.actions_bound = actions_bound
 
-        self.actor = Actor(num_states, num_actions, actions_bound, 128)
+        self.actor = Actor(num_states, num_actions, 128)
         self.actor_target = copy.deepcopy(self.actor)
-        self.critic = Critic(num_states, num_actions, 128, 2)
+        self.critic = Critic(num_states, num_actions, 128)
         self.critic_target = copy.deepcopy(self.critic)
 
         self.ou_noise = Ornstein_Uhlenbeck_Process(num_actions)
@@ -115,7 +111,7 @@ class DDPGAgent(object):
     def noisy_act(self, state):
         action = self.act(state)
         action = action + self.ou_noise.next()
-        action = np.clip(action, -self.actions_bound, self.actions_bound)
+        action = np.clip(action, -1, 1)
         return action
 
     def act(self, state):

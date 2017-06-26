@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from gym import ActionWrapper
+from gym.spaces.box import Box
 
 OU_THETA = 0.15
 OU_MU = 0
@@ -9,6 +11,32 @@ OU_DT = 1e-2
 USE_CUDA = torch.cuda.is_available()
 # dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 
+def Normalize_Env(env):
+
+    class Normalized_Env(ActionWrapper):
+        """docstring for Normalized_Env"""
+        def __init__(self, env):
+            super(Normalized_Env, self).__init__(env)
+            assert(isinstance(env.action_space, Box))
+            self.actions_lb = env.action_space.low
+            self.actions_up = env.action_space.high
+            self.actions_range = self.actions_up - self.actions_lb
+
+            print("Normalize {} action space to [-1,1]".format(str(env)))
+
+        def _action(self, action):
+            # action are [-1, 1]
+            action = (self.actions_lb + self.actions_up + self.actions_range * action) / 2
+            return action
+            
+        def _reverse_action(self, action):
+            # action are [-a, a]
+            action = 2 * np.divide((action - self.actions_lb), self.actions_range) - 1
+            return action
+            
+    normalized_env = Normalized_Env(env)
+            
+    return normalized_env
 
 class Ornstein_Uhlenbeck_Process(object):
     """docstring for Ornstein_Uhlenbeck_Process"""
@@ -45,7 +73,7 @@ if __name__ == '__main__':
 
     states = []
     for _ in range(100):
-        states.append(ou.next)
+        states.append(ou.next())
     import matplotlib
     matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt

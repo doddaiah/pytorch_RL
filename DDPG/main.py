@@ -5,8 +5,10 @@ import numpy as np
 from itertools import count
 
 from ddpg import SARS, DDPGAgent, DDPGOptimizer
+from utils import Normalize_Env
 
 ENV = 'BipedalWalker-v2'
+# ENV = 'Pendulum-v0'
 CAPACITY = int(1e6)
 NUM_EPISODE = int(1e4)
 NUM_TEST = 5
@@ -19,20 +21,15 @@ CRITIC_INIT_LR = 1e-3
 NUMPY_PRECISION = np.float32
 CRAYON_VISUALIZTION = True
 
-
 def main(args):
     env = gym.make(args.env)
+    env = Normalize_Env(env)
+
     outdir = '/tmp/ddpg'
     env = wrappers.Monitor(env, outdir, force=True)
 
-    assert (env.action_space.high == -
-            env.action_space.low).all(), 'action_space bound should be symmetric'
-    assert (env.action_space.high == env.action_space.high[
-            0]).all(), 'all action dims should have the same bound'
-
     agent = DDPGAgent(env.observation_space.shape[0],
-                      env.action_space.shape[0],
-                      float(env.action_space.high[0]))
+                      env.action_space.shape[0])
     optimizer = DDPGOptimizer(agent, args.capacity, args.batch_size,
                               args.gamma, args.tau, args.init_lr, args.weight_decay, args.crayon_vis)
 
