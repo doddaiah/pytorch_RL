@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.nn.init import uniform
 
 from pycrayon import CrayonClient
 
@@ -46,13 +47,14 @@ class ReplayMemory(object):
 class Actor(nn.Module):
     """docstring for actor"""
 
-    def __init__(self, num_states, num_actions, num_hidden_units):
+    def __init__(self, num_states, num_actions, num_hidden1=400, num_hidden2=300):
         super(Actor, self).__init__()
-        self.input_layer = nn.Linear(num_states, num_hidden_units)
-        self.input_bn = nn.BatchNorm1d(num_hidden_units)
-        self.fc1 = nn.Linear(num_hidden_units, num_hidden_units)
-        self.fc1_bn = nn.BatchNorm1d(num_hidden_units)
-        self.output_layer = nn.Linear(num_hidden_units, num_actions)
+        self.input_layer = nn.Linear(num_states, num_hidden1)
+        self.input_bn = nn.BatchNorm1d(num_hidden1)
+        self.fc1 = nn.Linear(num_hidden1, num_hidden2)
+        self.fc1_bn = nn.BatchNorm1d(num_hidden2)
+        self.output_layer = nn.Linear(num_hidden2, num_actions)
+        self.initialize()
 
     def forward(self, state):
         output = F.relu(self.input_bn(self.input_layer(state)))
@@ -60,31 +62,51 @@ class Actor(nn.Module):
         output = F.tanh(self.output_layer(output))
         return output
 
+    def initialize(self):
+        uniform(self.input_layer.weight, -1/np.sqrt(self.input_layer.in_features),
+                1/np.sqrt(self.input_layer.in_features))
+        uniform(self.input_layer.bias, -1/np.sqrt(self.input_layer.in_features),
+                1/np.sqrt(self.input_layer.in_features))
+        uniform(self.fc1.weight, -1/np.sqrt(self.fc1.in_features),
+                1/np.sqrt(self.fc1.in_features))
+        uniform(self.fc1.bias, -1/np.sqrt(self.fc1.in_features),
+                1/np.sqrt(self.fc1.in_features))
+        uniform(self.output_layer.weight, -3e-3, 3e-3)
+        uniform(self.output_layer.bias, -3e-3, 3e-3)
+
 
 class Critic(nn.Module):
     """docstring for Critic"""
 
-    def __init__(self, num_states, num_actions, num_hidden_units):
+    def __init__(self, num_states, num_actions, num_hidden1=400, num_hidden2=300):
         super(Critic, self).__init__()
-        self.state_input_layer = nn.Linear(num_states, num_hidden_units)
-        self.state_input_bn = nn.BatchNorm1d(num_hidden_units)
-        self.cat_fc = nn.Linear(num_hidden_units+num_actions, num_hidden_units)
-        self.cat_fc_bn = nn.BatchNorm1d(num_hidden_units)
-        self.fc1 = nn.Linear(num_hidden_units, num_hidden_units)
-        self.fc1_bn = nn.BatchNorm1d(num_hidden_units)
-        self.fc2 = nn.Linear(num_hidden_units, num_hidden_units)
-        self.fc2_bn = nn.BatchNorm1d(num_hidden_units)
-        self.output_layer = nn.Linear(num_hidden_units, 1)
+        self.state_input_layer = nn.Linear(num_states, num_hidden1)
+        self.state_input_bn = nn.BatchNorm1d(num_hidden1)
+        self.cat_fc = nn.Linear(num_hidden1+num_actions, num_hidden2)
+        self.cat_fc_bn = nn.BatchNorm1d(num_hidden2)
+        self.output_layer = nn.Linear(num_hidden2, 1)
+        self.initialize()
 
     def forward(self, state, action):
         # input: state + action (both are continuous)
-        state_input = F.relu(self.state_input_bn(self.state_input_layer(state)))
+        state_input = F.relu(self.state_input_bn(
+            self.state_input_layer(state)))
         output = torch.cat((state_input, action), 1)
         output = F.relu(self.cat_fc_bn(self.cat_fc(output)))
-        output = F.relu(self.fc1_bn(self.fc1(output)))
-        output = F.relu(self.fc2_bn(self.fc2(output)))
         output = self.output_layer(output)
         return output
+
+    def initialize(self):
+        uniform(self.state_input_layer.weight, -1/np.sqrt(self.state_input_layer.in_features),
+                1/np.sqrt(self.state_input_layer.in_features))
+        uniform(self.state_input_layer.bias, -1/np.sqrt(self.state_input_layer.in_features),
+                1/np.sqrt(self.state_input_layer.in_features))
+        uniform(self.cat_fc.weight, -1/np.sqrt(self.cat_fc.in_features),
+                1/np.sqrt(self.cat_fc.in_features))
+        uniform(self.cat_fc.bias, -1/np.sqrt(self.cat_fc.in_features),
+                1/np.sqrt(self.cat_fc.in_features))
+        uniform(self.output_layer.weight, -3e-3, 3e-3)
+        uniform(self.output_layer.bias, -3e-3, 3e-3)
 
 
 class DDPGAgent(object):
@@ -95,9 +117,9 @@ class DDPGAgent(object):
         self.num_states = num_states
         self.num_actions = num_actions
 
-        self.actor = Actor(num_states, num_actions, 128)
+        self.actor = Actor(num_states, num_actions)
         self.actor_target = copy.deepcopy(self.actor)
-        self.critic = Critic(num_states, num_actions, 128)
+        self.critic = Critic(num_states, num_actions)
         self.critic_target = copy.deepcopy(self.critic)
 
         self.ou_noise = Ornstein_Uhlenbeck_Process(num_actions)
@@ -194,7 +216,8 @@ class DDPGOptimizer(object):
 
         outputs = self.agent.critic(Variable(torch.from_numpy(states), requires_grad=False),
                                     self.agent.actor(Variable(torch.from_numpy(states), requires_grad=True)))
-        # negation since we want the police increase the likelihood of good reward trajectory
+        # negation since we want the police increase the likelihood of good
+        # reward trajectory
         outputs = -torch.mean(outputs)
         outputs.backward()
 
